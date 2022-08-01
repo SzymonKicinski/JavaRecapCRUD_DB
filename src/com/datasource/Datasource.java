@@ -23,13 +23,29 @@ public class Datasource {
 //                    Utils.TABLE_SONGS_COLUMN_TRACK + Utils.FROM +
 //                    Utils.TABLE_ARTIST_SONG_VIEW + Utils.WHERE +
 //                    Utils.TABLE_SONGS_COLUMN_TITLE + Utils.EQUAL + "?";
+
+
     private Connection conn;
     private PreparedStatement querySongInfoView;
+
+    private PreparedStatement insertIntoArtists;
+    private PreparedStatement insertIntoAlbums;
+    private PreparedStatement insertIntoSongs;
+
+    private PreparedStatement queryArtist;
+    private PreparedStatement queryAlbum;
+
 
     public boolean open() {
         try {
             conn = DriverManager.getConnection(CONNECTION_STRING + DB_NAME);
             querySongInfoView = conn.prepareStatement(Utils.QUERY_VIEW_ARTIST_LIST_INFO_BY_TITLE);
+            insertIntoArtists = conn.prepareStatement(Utils.INSERT_ARTIST, Statement.RETURN_GENERATED_KEYS);
+            insertIntoAlbums = conn.prepareStatement(Utils.INSERT_ALBUM, Statement.RETURN_GENERATED_KEYS);
+            insertIntoSongs = conn.prepareStatement(Utils.INSERT_SONG);
+            queryArtist = conn.prepareStatement(Utils.QUERY_ARTIST_EXISTS);
+            queryAlbum = conn.prepareStatement(Utils.QUERY_ALBUM_EXISTS);
+//            conn.setAutoCommit(false);
 
             return true;
         } catch (SQLException e) {
@@ -41,8 +57,25 @@ public class Datasource {
 
     public void close() {
         try {
+            conn.setAutoCommit(true);
+
             if (querySongInfoView != null) {
                 querySongInfoView.close();
+            }
+            if (insertIntoAlbums != null) {
+                insertIntoAlbums.close();
+            }
+            if (insertIntoArtists != null) {
+                insertIntoArtists.close();
+            }
+            if (insertIntoSongs != null) {
+                insertIntoSongs.close();
+            }
+            if (queryAlbum != null) {
+                queryAlbum.close();
+            }
+            if (queryArtist != null) {
+                queryArtist.close();
             }
             if (conn != null ) {
                 conn.close();
@@ -280,4 +313,122 @@ public class Datasource {
 
 
     }
-}
+
+
+    public int insertArtist(String name) throws SQLException {
+        try {
+            queryArtist.setString(1, name);
+            ResultSet resultSet = queryArtist.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getInt(1);
+            } else {
+                // Insert the artist
+                insertIntoArtists.setString(1, name);
+                int affectedRows = insertIntoArtists.executeUpdate();
+
+                if (affectedRows != 1) {
+                    throw new SQLException("Error while adding new artist " + queryArtist.toString());
+                }
+
+                ResultSet generatedKeys = insertIntoArtists.getGeneratedKeys();
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                } else {
+                    throw new SQLException("Cloud not get _id of artist vol.2 - Don't find the id for artist"
+                            + queryArtist.toString());
+                }
+            }
+
+        } catch (SQLException e){
+            System.out.println("Inserting failed of " + insertIntoArtists
+                    + " insertArtist");
+            System.out.println(e.getMessage());
+            System.out.println(Arrays.toString(e.getStackTrace()));
+            return -1;
+            }
+    }
+
+    public int insertAlbum(String name, int artistId) throws SQLException {
+        try {
+            queryAlbum.setString(1, name);
+            queryAlbum.setInt(2, artistId);
+            ResultSet resultSet = queryAlbum.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getInt(1);
+            } else {
+                // Insert the album
+                insertIntoAlbums.setString(1, name);
+                insertIntoAlbums.setInt(2, artistId);
+                int affectedRows = insertIntoAlbums.executeUpdate();
+
+                if (affectedRows != 1) {
+                    throw new SQLException("Error while adding new album " + queryAlbum.toString());
+                }
+
+                ResultSet generatedKeys = insertIntoAlbums.getGeneratedKeys();
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                } else {
+                    throw new SQLException("Cloud not get _id of album vol.2 - Don't find the id for albums"
+                            + queryArtist.toString());
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Inserting failed of " + insertIntoAlbums
+                    + " insertAlbum");
+            System.out.println(e.getMessage());
+            System.out.println(Arrays.toString(e.getStackTrace()));
+            return -1;
+        }
+    }
+
+    public int insertSong(String title, String artist,String album, int trackId) {
+        try {
+            conn.setAutoCommit(false);
+            // Check if exist the artists
+            int artistId = insertArtist(artist);
+            // Check if the albums exists too
+            int albumId = insertAlbum(album, artistId);
+
+            insertIntoSongs.setInt(1, trackId);
+            insertIntoSongs.setString(2, title);
+            insertIntoSongs.setInt(3, albumId);
+
+            int affectedRows = insertIntoSongs.executeUpdate();
+            if (affectedRows == 1) {
+                conn.commit();
+                ResultSet generatedKeys = insertIntoSongs.getGeneratedKeys();
+                if (generatedKeys.next())
+                return generatedKeys.getInt(1);
+            } else {
+                throw new SQLException("Error while adding new album " + queryAlbum.toString());
+            }
+        } catch (SQLException e) {
+            System.out.println("Inserting failed of " + insertIntoSongs
+                    + " insertSong");
+            System.out.println("Performing rollback! #AHTUNG#");
+            try {
+                conn.rollback();
+            } catch (SQLException e2) {
+                System.out.println(e2.getMessage());
+                System.out.println("Winter is coming! You have failed on us, my Padawan!");
+                System.out.println(Arrays.toString(e2.getStackTrace()));
+                return -1;
+            }
+            System.out.println(e.getMessage());
+            System.out.println(Arrays.toString(e.getStackTrace()));
+            return -1;
+        } finally {
+            try {
+                System.out.println("Resetting default commit behaviour");
+                conn.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.out.println("You F##K Up This Time!");
+                System.out.println("Call for Thanos");
+            }
+        }
+        return -1;
+    }
+
+ }

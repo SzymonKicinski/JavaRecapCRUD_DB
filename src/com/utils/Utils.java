@@ -36,6 +36,7 @@ public class Utils {
     public static String DOT = ".";
     public static String COMMA = ", ";
     public static String AS = " AS ";
+    public static String VALUES = " VALUES ";
     private static final String OR = "OR";
     public static String COLLATE_NOCASE = " COLLATE NOCASE ";
 
@@ -137,4 +138,35 @@ public class Utils {
             Utils.FROM + TABLE_ARTIST_SONG_VIEW + Utils.WHERE + Utils.TABLE_SONGS_COLUMN_TITLE +
             Utils.EQUAL + "?" + Utils.OR + Utils.EQUAL + "?";
 
+
+    public static final String INSERT_ARTIST =
+            Utils.INSERT_INTO + Utils.TABLE_ARTISTS + '(' +
+                    Utils.TABLE_ARTISTS_COLUMN_NAME + ')' +
+                    Utils.VALUES +
+                    "(?)";
+
+    public static final String INSERT_ALBUM =
+            Utils.INSERT_INTO + Utils.TABLE_ALBUMS + '(' +
+                    Utils.TABLE_ALBUMS_COLUMN_NAME + Utils.COMMA +
+                    Utils.TABLE_ALBUMS_COLUMN_ARTIST + ')' +
+                    Utils.VALUES +
+                    "(?" + Utils.COMMA + "?)";
+
+    public static final String INSERT_SONG =
+            Utils.INSERT_INTO + Utils.TABLE_SONGS + '(' +
+                    Utils.TABLE_SONGS_COLUMN_TRACK + Utils.COMMA +
+                    Utils.TABLE_SONGS_COLUMN_TITLE + Utils.COMMA +
+                    Utils.TABLE_SONGS_COLUMN_ALBUM + ')' +
+                    Utils.VALUES +
+                    "(?" + Utils.COMMA + "?" + Utils.COMMA + "?)";
+
+    public static final String QUERY_ARTIST_EXISTS =
+            Utils.SELECT + Utils.TABLE_ARTISTS_COLUMN_ID + FROM +
+                    TABLE_ARTISTS + WHERE + TABLE_ARTISTS_COLUMN_NAME + EQUAL + "?";
+    public static final String QUERY_SONGS_EXISTS =
+            Utils.SELECT + Utils.TABLE_SONGS_COLUMN_ID + FROM +
+                    TABLE_SONGS + WHERE + TABLE_SONGS_COLUMN_ALBUM + EQUAL + "?";
+    public static final String QUERY_ALBUM_EXISTS =
+            Utils.SELECT + Utils.TABLE_ALBUMS_COLUMN_ID + FROM +
+                    TABLE_ALBUMS + WHERE + TABLE_ALBUMS_COLUMN_NAME + EQUAL + "?";
 }
